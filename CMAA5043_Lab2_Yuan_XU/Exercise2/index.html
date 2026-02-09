@@ -1,50 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Personal Homepage</title>
-    <!-- External CSS link -->
-    <link rel="stylesheet" href="css/style.css">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Personal Portfolio</title>
     <!-- Chat GPT helped with the layout structure and semantic tag choices -->
-</head>
-<body>
-
-    <header id="main-header">
-        <h1>Welcome to My Website</h1>
-        <nav>
-            <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="projects.html">Projects</a></li>
-                <li><a href="contact.html">Contact</a></li>
-            </ul>
-        </nav>
-    </header>
-
-    <main>
-        <section id="hero">
-            <h2>About Me</h2>
-            <img src="img/hero.jpg" alt="Hero Image" class="hero-img">
-            <p>Welcome to my personal portfolio! I am a student exploring the world of web development and design. This website showcases some of my recent work and projects.</p>
-        </section>
-
-        <section class="audio-section">
-            <h3>Listen to My Welcome Greeting</h3>
-            <audio controls>
-                <source src="audio/welcome.mp3" type="audio/mpeg">
-                Your browser does not support the audio element.
-            </audio>
-        </section>
-
-        <section id="intro">
-            <h3>My Journey</h3>
-            <p>I started learning HTML and CSS recently, and I'm excited to share my progress. This homepage is the gateway to my digital world.</p>
-        </section>
-    </main>
-
-    <footer id="main-footer">
-        <p>&copy; 2026 My Portfolio. All rights reserved. Created with the help of Antigravity AI.</p>
-    </footer>
-
-</body>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
