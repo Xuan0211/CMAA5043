@@ -1,0 +1,16 @@
+*.zip
+# ---------------------- macOS 系统文件 ----------------------
+# macOS 文件夹属性文件（最常见的垃圾文件，注意是 .DS_Store 不是 DS_sotore）
+.DS_Store
+# 匹配所有子目录下的 .DS_Store
+**/.DS_Store
+# macOS 桌面服务存储文件
+.DS_Store?
+# macOS Spotlight 索引文件
+.Spotlight-V100
+# macOS 回收站临时文件
+.Trashes
+# macOS 卷配置文件
+VolumeIcon.icns
+# macOS 网络存储相关文件
+.fseventsd
