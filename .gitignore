@@ -14,3 +14,73 @@
 VolumeIcon.icns
 # macOS 网络存储相关文件
 .fseventsd
+
+# ---------------------- Node.js / React 项目 ----------------------
+# 依赖包目录
+node_modules/
+# 生产构建产物
+dist/
+build/
+# 缓存文件
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+# 运行时文件
+*.log
+*.pid
+*.seed
+*.pid.lock
+# 环境变量文件（包含敏感信息）
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# IDE 和编辑器配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+# 测试覆盖率报告
+coverage/
+.nyc_output/
+# 操作系统相关文件
+Thumbs.db
+Desktop.ini
+
+# ---------------------- Python 项目 ----------------------
+# 虚拟环境
+venv/
+.venv/
+env/
+ENV/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 包管理
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# IDE 和编辑器
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 测试
+.coverage
+htmlcov/
+.pytest_cache/
+
+# 操作系统
+Thumbs.db
+Desktop.ini

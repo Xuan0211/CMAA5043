@@ -1,0 +1,229 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  color: #333;
+  line-height: 1.6;
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* Left Profile */
+.left-profile {
+  width: 260px;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid #eee;
+  position: fixed;
+  height: 100vh;
+  left: max(0px, calc((100vw - 1200px) / 2));
+}
+
+.profile-logo {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  object-fit: contain;
+  margin-bottom: 24px;
+}
+
+.profile-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.profile-location, .profile-quote {
+  text-align: center;
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.profile-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.profile-links a {
+  color: #6a5acd;
+  text-decoration: underline;
+  font-size: 14px;
+  text-align: center;
+}
+
+.profile-links a:hover {
+  text-decoration: none;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 40px 60px;
+  margin-left: 260px;
+}
+
+/* About Me */
+.section-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #111;
+}
+
+.about-text {
+  font-size: 15px;
+  margin-bottom: 16px;
+  color: #444;
+}
+
+/* Video Player */
+.video-wrapper {
+  background-color: #f5f5f5;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 32px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.video-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.video-iframe {
+  width: 100%;
+  max-width: 800px;
+  aspect-ratio: 16 / 9;
+  border: none;
+  border-radius: 8px;
+  background: #000;
+}
+
+/* Hubs */
+.hubs-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 40px 0;
+}
+
+.hubs-carousel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  justify-content: center;
+}
+
+.nav-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 5px;
+  background-color: #e0e0e0;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  color: #fff;
+  transition: background-color 0.2s;
+}
+
+.nav-button:hover {
+  background-color: #ccc;
+}
+
+.hub-cards-container {
+  display: flex;
+  gap: 20px;
+  overflow: hidden;
+  justify-content: center;
+}
+
+.hub-card {
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hub-image {
+  width: 220px;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.hub-name {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Latest News */
+.news-section {
+  margin-top: 40px;
+}
+
+.news-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 240px;
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+.news-list {
+  padding-left: 20px;
+}
+
+.news-item {
+  font-size: 15px;
+  margin-bottom: 8px;
+  color: #222;
+}
+
+/* Responsive adjustments */
+@media (max-width: 800px) {
+  .app-container {
+    flex-direction: column;
+  }
+  .left-profile {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #eee;
+  }
+  .main-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+}
