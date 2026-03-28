@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tank Game - Lab 5</title>
+  <style>
+    body {
+      margin: 0;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      color: #eee;
+    }
+    h1 {
+      font-size: 1.4rem;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+      color: #7ec8e3;
+      text-transform: uppercase;
+    }
+    #hud {
+      display: flex;
+      gap: 40px;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+    #hud span { color: #f9e784; }
+    canvas {
+      border: 2px solid #7ec8e3;
+      box-shadow: 0 0 20px rgba(126, 200, 227, 0.4);
+      display: block;
+    }
+    #controls {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: #aaa;
+      letter-spacing: 1px;
+    }
+    #message {
+      margin-top: 8px;
+      font-size: 1rem;
+      color: #f9e784;
+      min-height: 1.4em;
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tank Game</h1>
+  <div id="hud">
+    Score: <span id="scoreDisplay">0</span>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    Lives: <span id="livesDisplay">3</span>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    Ammo: <span id="ammoDisplay">&#9679;</span>
+  </div>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="controls">WASD — Move &nbsp;|&nbsp; SPACE — Shoot &nbsp;|&nbsp; R — Restart</div>
+  <div id="message"></div>
+
+  <script>
+    // ─── Canvas & Context ───────────────────────────────────────────────────
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const CANVAS_W = canvas.width;
+    const CANVAS_H = canvas.height;
+
+    // ─── HUD elements ───────────────────────────────────────────────────────
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const livesDisplay = document.getElementById('livesDisplay');
+    const ammoDisplay  = document.getElementById('ammoDisplay');
+    const messageEl    = document.getElementById('message');
+
+    // ─── Game State ─────────────────────────────────────────────────────────
+    const TANK_SIZE = 40;  // 40x40 pixels
+
+    let tankX, tankY, keys, bullets, enemies, explosions, score, lives;
+    let gameOver = false;
+    let shootCooldown = 0;
+    const SHOOT_COOLDOWN_MAX = 18;  // frames between shots
+    const BULLET_SPEED = 12;
+    const ENEMY_SPAWN_INTERVAL = 120; // frames
+    let frameCount = 0;
+
+    // ─── Landscape: static decorations ─────────────────────────────────────
+    const landscape = generateLandscape();
+
+    function generateLandscape() {
+      const items = [];
+      // Rocks
+      for (let i = 0; i < 8; i++) {
+        items.push({
+          type: 'rock',
+          x: 80 + Math.random() * 640,
+          y: 80 + Math.random() * 440,
+          w: 18 + Math.random() * 22,
+          h: 12 + Math.random() * 16,
+        });
+      }
+      // Bushes
+      for (let i = 0; i < 6; i++) {
+        items.push({
+          type: 'bush',
+          x: 60 + Math.random() * 680,
+          y: 60 + Math.random() * 480,
+          r: 10 + Math.random() * 12,
+        });
+      }
+      return items;
+    }
+
+    function initGame() {
+      tankX = CANVAS_W / 2;
+      tankY = CANVAS_H / 2;
+      keys = { w: false, a: false, s: false, d: false };
+      bullets = [];
+      enemies = [];
+      explosions = [];
+      score = 0;
+      lives = 3;
+      gameOver = false;
+      frameCount = 0;
+      shootCooldown = 0;
+      messageEl.textContent = '';
+      updateHUD();
+
+      // Spawn a first enemy immediately
+      spawnEnemy();
+    }
+
+    // ─── Input ──────────────────────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      if (k in keys) keys[k] = true;
+
+      if (k === ' ' || e.key === ' ') {
+        e.preventDefault();
+        if (!gameOver && shootCooldown <= 0) {
+          shootBullet();
+          shootCooldown = SHOOT_COOLDOWN_MAX;
+        }
+      }
+      if (k === 'r' && gameOver) initGame();
+    });
+
+    document.addEventListener('keyup', (e) => {
+      const k = e.key.toLowerCase();
+      if (k in keys) keys[k] = false;
+    });
+
+    // ─── Shooting ───────────────────────────────────────────────────────────
+    function shootBullet() {
+      // Barrel tip is 20px to the right of tank center
+      bullets.push({
+        x: tankX + 35,
+        y: tankY,
+        velocityX: BULLET_SPEED,
+        velocityY: 0,
+      });
+    }
+
+    // ─── Enemy spawning ─────────────────────────────────────────────────────
+    function spawnEnemy() {
+      // Spawn on a random edge of the canvas
+      const edge = Math.floor(Math.random() * 4);
+      let ex, ey;
+      if (edge === 0) { ex = Math.random() * CANVAS_W; ey = 20; }
+      else if (edge === 1) { ex = CANVAS_W - 20; ey = Math.random() * CANVAS_H; }
+      else if (edge === 2) { ex = Math.random() * CANVAS_W; ey = CANVAS_H - 20; }
+      else { ex = 20; ey = Math.random() * CANVAS_H; }
+
+      enemies.push({
+        x: ex, y: ey,
+        size: 30,
+        speed: 0.8 + Math.random() * 0.8,
+        hp: 1,
+        // flash state for visual feedback
+        hitFlash: 0,
+      });
+    }
+
+    // ─── Explosion particles ─────────────────────────────────────────────────
+    function createExplosion(x, y, color) {
+      for (let i = 0; i < 12; i++) {
+        const angle = (Math.PI * 2 / 12) * i + Math.random() * 0.3;
+        const speed = 2 + Math.random() * 3;
+        explosions.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 30 + Math.random() * 20,
+          maxLife: 50,
+          color,
+          r: 3 + Math.random() * 3,
+        });
+      }
+    }
+
+    // ─── HUD update ─────────────────────────────────────────────────────────
+    function updateHUD() {
+      scoreDisplay.textContent = score;
+      livesDisplay.textContent = lives;
+      // Ammo cooldown indicator: filled dots
+      const filled = Math.ceil((1 - shootCooldown / SHOOT_COOLDOWN_MAX) * 3);
+      ammoDisplay.textContent = '●'.repeat(Math.max(0, filled)) + '○'.repeat(3 - Math.max(0, filled));
+    }
+
+    // ─── Assignment 1: Boundary clamping ────────────────────────────────────
+    function clampTank() {
+      const half = TANK_SIZE / 2;
+      if (tankX < half) tankX = half;
+      if (tankX > CANVAS_W - half) tankX = CANVAS_W - half;
+      if (tankY < half) tankY = half;
+      if (tankY > CANVAS_H - half) tankY = CANVAS_H - half;
+    }
+
+    // ─── Update logic ────────────────────────────────────────────────────────
+    function updateGame() {
+      const speed = 3;
+      if (keys.w) tankY -= speed;
+      if (keys.s) tankY += speed;
+      if (keys.a) tankX -= speed;
+      if (keys.d) tankX += speed;
+
+      // Assignment 1: clamp tank inside canvas
+      clampTank();
+
+      // Cooldown
+      if (shootCooldown > 0) shootCooldown--;
+
+      // Move bullets; remove if off-screen
+      bullets = bullets.filter(b => {
+        b.x += b.velocityX;
+        b.y += b.velocityY;
+        return b.x > 0 && b.x < CANVAS_W && b.y > 0 && b.y < CANVAS_H;
+      });
+
+      // Move enemies toward tank
+      enemies.forEach(e => {
+        const dx = tankX - e.x;
+        const dy = tankY - e.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0) {
+          e.x += (dx / dist) * e.speed;
+          e.y += (dy / dist) * e.speed;
+        }
+        if (e.hitFlash > 0) e.hitFlash--;
+      });
+
+      // Bullet-enemy collision
+      bullets = bullets.filter(bullet => {
+        let hit = false;
+        enemies = enemies.filter(e => {
+          const dx = bullet.x - e.x;
+          const dy = bullet.y - e.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < e.size / 2 + 4) {
+            // Assignment 2B: Visual feedback — explosion on hit
+            createExplosion(e.x, e.y, '#f9a825');
+            score += 10;
+            hit = true;
+            return false; // remove enemy
+          }
+          return true;
+        });
+        return !hit;
+      });
+
+      // Enemy-tank collision
+      enemies = enemies.filter(e => {
+        const dx = tankX - e.x;
+        const dy = tankY - e.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < TANK_SIZE / 2 + e.size / 2 - 4) {
+          createExplosion(tankX, tankY, '#e53935');
+          lives--;
+          return false; // remove enemy on collision
+        }
+        return true;
+      });
+
+      // Update explosion particles
+      explosions = explosions.filter(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        p.vx *= 0.93;
+        p.vy *= 0.93;
+        return p.life > 0;
+      });
+
+      // Spawn new enemies
+      frameCount++;
+      if (frameCount % ENEMY_SPAWN_INTERVAL === 0) {
+        spawnEnemy();
+        // Gradually increase difficulty
+        if (frameCount % (ENEMY_SPAWN_INTERVAL * 3) === 0) {
+          spawnEnemy();
+        }
+      }
+
+      // Game over check
+      if (lives <= 0) {
+        lives = 0;
+        gameOver = true;
+        messageEl.textContent = `GAME OVER — Score: ${score} — Press R to restart`;
+      }
+
+      updateHUD();
+    }
+
+    // ─── Draw landscape ──────────────────────────────────────────────────────
+    function drawLandscape() {
+      landscape.forEach(item => {
+        if (item.type === 'rock') {
+          ctx.fillStyle = '#546e7a';
+          ctx.beginPath();
+          ctx.ellipse(item.x, item.y, item.w / 2, item.h / 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#37474f';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        } else if (item.type === 'bush') {
+          ctx.fillStyle = '#2e7d32';
+          ctx.beginPath();
+          ctx.arc(item.x, item.y, item.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#388e3c';
+          ctx.beginPath();
+          ctx.arc(item.x - item.r * 0.4, item.y - item.r * 0.3, item.r * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(item.x + item.r * 0.4, item.y - item.r * 0.3, item.r * 0.65, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    // ─── Draw tank ───────────────────────────────────────────────────────────
+    function drawTank(ctx, x, y) {
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(x + 3, y + 5, 22, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tracks
+      ctx.fillStyle = '#5d4037';
+      ctx.fillRect(x - 22, y - 8, 8, 22);
+      ctx.fillRect(x + 14, y - 8, 8, 22);
+
+      // Tank body
+      ctx.fillStyle = '#558b2f';
+      ctx.fillRect(x - 18, y - 10, 36, 20);
+
+      // Turret
+      ctx.fillStyle = '#33691e';
+      ctx.fillRect(x - 12, y - 14, 24, 12);
+
+      // Barrel (gun)
+      ctx.strokeStyle = '#1b5e20';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x + 12, y - 8);
+      ctx.lineTo(x + 34, y - 8);
+      ctx.stroke();
+
+      // Hatch detail
+      ctx.fillStyle = '#1b5e20';
+      ctx.beginPath();
+      ctx.arc(x, y - 8, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ─── Draw enemy ──────────────────────────────────────────────────────────
+    function drawEnemy(e) {
+      const x = e.x;
+      const y = e.y;
+      const s = e.size / 2;
+
+      // Flash red on hit
+      const flash = e.hitFlash > 0;
+
+      // Body
+      ctx.fillStyle = flash ? '#ef5350' : '#b71c1c';
+      ctx.fillRect(x - s, y - s * 0.7, s * 2, s * 1.4);
+
+      // Turret
+      ctx.fillStyle = flash ? '#ff8a80' : '#c62828';
+      ctx.fillRect(x - s * 0.7, y - s * 1.2, s * 1.4, s * 0.7);
+
+      // Enemy barrel (pointing left — toward player if player is left)
+      ctx.strokeStyle = '#7f0000';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.7, y - s * 0.85);
+      ctx.lineTo(x - s * 1.5, y - s * 0.85);
+      ctx.stroke();
+
+      // HP indicator dot
+      ctx.fillStyle = '#ef9a9a';
+      ctx.beginPath();
+      ctx.arc(x, y - s * 1.4, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ─── Draw bullets ────────────────────────────────────────────────────────
+    function drawBullets() {
+      bullets.forEach(b => {
+        // Glow effect
+        ctx.fillStyle = 'rgba(255,235,59,0.3)';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffeb3b';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff9c4';
+        ctx.beginPath();
+        ctx.arc(b.x - 1, b.y - 1, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // ─── Draw explosions ─────────────────────────────────────────────────────
+    function drawExplosions() {
+      explosions.forEach(p => {
+        const alpha = p.life / p.maxLife;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    // ─── Draw grid ground ────────────────────────────────────────────────────
+    function drawGround() {
+      // Subtle grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < CANVAS_W; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_H); ctx.stroke();
+      }
+      for (let y = 0; y < CANVAS_H; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_W, y); ctx.stroke();
+      }
+    }
+
+    // ─── Main game loop ───────────────────────────────────────────────────────
+    function gameLoop() {
+      // Clear
+      ctx.fillStyle = '#263238';
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      drawGround();
+      drawLandscape();
+
+      if (!gameOver) {
+        updateGame();
+      }
+
+      // Draw game objects
+      drawBullets();
+      enemies.forEach(drawEnemy);
+      drawTank(ctx, tankX, tankY);
+      drawExplosions();
+
+      // Game-over overlay
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.fillStyle = '#ef5350';
+        ctx.font = 'bold 52px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('GAME OVER', CANVAS_W / 2, CANVAS_H / 2 - 20);
+        ctx.fillStyle = '#fff';
+        ctx.font = '22px Courier New';
+        ctx.fillText(`Final Score: ${score}`, CANVAS_W / 2, CANVAS_H / 2 + 24);
+        ctx.fillStyle = '#aaa';
+        ctx.font = '16px Courier New';
+        ctx.fillText('Press R to restart', CANVAS_W / 2, CANVAS_H / 2 + 58);
+        ctx.textAlign = 'left';
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ─── Start ───────────────────────────────────────────────────────────────
+    initGame();
+    gameLoop();
+  </script>
+</body>
+</html>
