@@ -41,7 +41,3 @@ Enemies are destroyed by bullets, each worth 10 points. Spawn rate increases ove
 
 **Option C: Landscape**
 Static decorative rocks and bushes are procedurally placed across the battlefield, giving the map visual depth and a sense of environment.
-
-## Credits
-
-Yuan XU — CMAA5043 Creative Prototyping, Lab 5
