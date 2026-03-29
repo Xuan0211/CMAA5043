@@ -1,6 +1,8 @@
 # Tank Game — CMAA5043 Lab 5
 
 A 2D tank game built with HTML5 Canvas as part of the CMAA5043 Creative Prototyping course.
+See in github https://github.com/Xuan0211/CMAA5043
+
 
 ## How to Run
 
@@ -41,3 +43,5 @@ Enemies are destroyed by bullets, each worth 10 points. Spawn rate increases ove
 
 **Option C: Landscape**
 Static decorative rocks and bushes are procedurally placed across the battlefield, giving the map visual depth and a sense of environment.
+
+
