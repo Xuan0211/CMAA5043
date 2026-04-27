@@ -1,0 +1,416 @@
+/* ────────────────────────────────────────────────────────────
+   Tank Battle — Login Page
+   Design tokens taken directly from the Figma file
+   (file: HLTFZXO6ZrBXA4izznTKHl, node 3:2)
+   ──────────────────────────────────────────────────────────── */
+
+:root {
+  /* Background */
+  --bg-base: #0d120f;
+  --bg-grad-1: #212e21;
+  --bg-grad-2: #0f1712;
+  --bg-grad-3: #050805;
+  --bg-glow: #8cb259;
+  --bg-grid: rgba(153, 191, 115, 0.06);
+
+  /* Card */
+  --card-bg: rgba(23, 28, 23, 0.92);
+  --card-border: rgba(89, 115, 51, 0.5);
+  --card-radius: 12px;
+
+  /* Inputs */
+  --input-bg: #0a0f0a;
+  --input-border: #40522e;
+  --input-border-focus: #8cb233;
+  --label: #a6bf73;
+  --placeholder: #667352;
+
+  /* Text */
+  --title: #ebf5c7;
+  --subtitle: #99b266;
+  --muted: #8c9e73;
+  --footer-muted: #808c66;
+
+  /* Accent / button */
+  --accent: #8cb233;
+  --accent-bright: #c7e073;
+  --button-text: #0d1408;
+  --button-border: #d9eb99;
+
+  /* Tank armor */
+  --armor: #c7d98c;
+  --armor-dark: #8c9e52;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--title);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─────────────── Screen container ─────────────── */
+
+.login-screen {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* Background layers — match Figma BG / Gradient + Glow + Grid + Shade */
+
+.bg-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    var(--bg-grad-1) 0%,
+    var(--bg-grad-2) 50%,
+    var(--bg-grad-3) 100%
+  );
+  z-index: -4;
+}
+
+.bg-glow {
+  position: absolute;
+  top: -500px;
+  left: -80px;
+  width: 1600px;
+  height: 800px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(140, 178, 89, 0.35) 0%,
+    rgba(140, 178, 89, 0) 70%
+  );
+  pointer-events: none;
+  z-index: -3;
+}
+
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--bg-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--bg-grid) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: -2;
+}
+
+.bg-shade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 400px;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ─────────────── Content container ─────────────── */
+
+.login-content {
+  width: 100%;
+  max-width: 1440px;
+  padding: 120px 24px 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 44px;
+}
+
+/* ─────────────── Logo / Title block ─────────────── */
+
+.logo-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  text-align: center;
+}
+
+.tank-icon {
+  width: 140px;
+  height: 90px;
+  filter: drop-shadow(0 0 20px rgba(140, 178, 89, 0.35));
+}
+
+.title {
+  font-size: 64px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: var(--title);
+  margin: 0;
+  text-shadow: 0 0 24px rgba(140, 178, 89, 0.5);
+  line-height: 1.1;
+}
+
+.subtitle {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 6px;
+  color: var(--subtitle);
+  margin: 0;
+}
+
+/* ─────────────── Login Card ─────────────── */
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(178, 217, 115, 0.08);
+  backdrop-filter: blur(4px);
+}
+
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--title);
+  margin: 0;
+}
+
+.card-sub {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ─────────────── Input fields ─────────────── */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--label);
+  text-transform: uppercase;
+}
+
+.field-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.field-input:focus-within {
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px rgba(140, 178, 51, 0.15);
+}
+
+.field-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  color: var(--armor);
+  flex-shrink: 0;
+}
+
+.field-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.field-input input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--title);
+  padding: 0;
+  letter-spacing: 0.4px;
+}
+
+.field-input input::placeholder {
+  color: var(--placeholder);
+}
+
+/* ─────────────── Helper row ─────────────── */
+
+.helper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.checkbox-box {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.remember input:checked + .checkbox-box {
+  border-color: var(--accent);
+  background: rgba(140, 178, 51, 0.15);
+}
+
+.checkbox-tick {
+  font-size: 10px;
+  line-height: 1;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.forgot,
+.enlist {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.enlist {
+  font-weight: 600;
+}
+
+.forgot:hover,
+.enlist:hover {
+  text-decoration: underline;
+}
+
+/* ─────────────── Login button ─────────────── */
+
+.login-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 24px;
+  border-radius: 8px;
+  border: 1px solid var(--button-border);
+  background: linear-gradient(
+    180deg,
+    var(--accent-bright) 0%,
+    var(--accent) 100%
+  );
+  color: var(--button-text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px -2px rgba(140, 178, 51, 0.5);
+  transition: transform 100ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.login-button:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 8px 22px -2px rgba(140, 178, 51, 0.65);
+}
+
+.login-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 3px 10px -2px rgba(140, 178, 51, 0.5);
+}
+
+/* ─────────────── Status banner ─────────────── */
+
+.status {
+  font-size: 12.5px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.status-error {
+  background: rgba(229, 57, 53, 0.12);
+  border: 1px solid rgba(229, 57, 53, 0.45);
+  color: #ef9a9a;
+}
+
+.status-success {
+  background: rgba(140, 178, 51, 0.12);
+  border: 1px solid rgba(140, 178, 51, 0.5);
+  color: var(--accent-bright);
+}
+
+/* ─────────────── Footer ─────────────── */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.footer-muted {
+  color: var(--footer-muted);
+}
+
+/* ─────────────── Responsive tweaks ─────────────── */
+
+@media (max-width: 520px) {
+  .title { font-size: 44px; letter-spacing: 5px; }
+  .subtitle { font-size: 12px; letter-spacing: 4px; }
+  .login-content { padding: 64px 16px 40px; gap: 32px; }
+  .login-card { padding: 28px; }
+}
