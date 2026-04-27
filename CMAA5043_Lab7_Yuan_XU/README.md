@@ -1,39 +1,36 @@
-# Lab 4: ReactJS Hooks & Router
+# Lab 7: ReactJS Performance and Lazy Loading
 
-This lab focuses on advanced React concepts, including custom hooks, state management with Context API, and client-side routing.
+This section outlines the tasks completed for Lab 7, focusing on data fetching, performance measurement, and component lazy loading.
 
-![React Hooks and Router](./images/hooks.png)
-
-## Assignment No 1: Create a Custom Hook for Click Position Logging
+## Assignment No 1: Real-time LatestNews Component
 
 ### Objective
-Design a custom hook called `useClickPosition`. This hook should accept a `logName` as an input parameter.
+Create a `LatestNews` component that displays the current time fetched from a remote API and updates every second.
 
 ### Functionality
-When a user clicks within a designated area, the hook logs the click details (x, y coordinates relative to the element) and indicates which specific area was clicked. 
-- **Implementation**: The hook is implemented in `src/hooks/useClickPosition.js` and applied to the "About Me" section on the Home page.
+- Fetches time from `http://quan.suning.com/getSysTime.do`.
+- Implements error handling: If the API fails, it falls back to the system's local time, appending "(local time)".
+- Updates every second using `setInterval`.
 
 ---
 
-## Assignment No 2: Refactor Dark Mode Using Context Hook
+## Assignment No 2: Measure Rendering Time
 
 ### Objective
-Update the dark mode functionality from Lab 3 by refactoring it to use the React context hook.
+Use `performance.now()` to measure the rendering time of three components.
 
 ### Functionality
-This refactor improves state management and modularity. Instead of passing props down manually, the theme state is managed globally.
-- **Implementation**: Created `ThemeContext` in `src/context/ThemeContext.jsx`. The `ThemeProvider` wraps the entire app in `main.jsx`, allowing any component to toggle or consume the theme via the `useTheme` hook.
+- `performance.now()` is recorded before rendering and inside `useEffect` after rendering.
+- The difference is logged to the console in milliseconds.
+- Implemented in `Header.jsx`, `Footer.jsx`, and `LatestNews.jsx`.
 
 ---
 
-## Assignment No 3: Implement Gallery Page with Routing
+## Assignment No 3: Lazy-Load Components
 
 ### Objective
-Leverage routing to set up a dedicated Gallery page.
+Use `React.lazy` to lazy-load at least one component.
 
 ### Functionality
-Integrate the Gallery component (previously designed in Lab 3) as a new page in the application.
-- **Implementation**: 
-    - The Gallery page is accessible via the URL path `/gallery`.
-    - Integrated logic from the previous Projects page into `GalleryPage.jsx`.
-    - Configured React Router in `App.jsx` and updated the `Header` navigation.
+- The `GalleryPage` component is now loaded lazily in `App.jsx` using `React.lazy`.
+- A `Suspense` wrapper with a fallback loading indicator is added to `Routes` to handle the asynchronous loading of the component.

@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import LatestNews from '../components/LatestNews';
 import useClickPosition from '../hooks/useClickPosition';
 
 function Home() {
@@ -11,6 +12,7 @@ function Home() {
             <Header title="Welcome to My Website" />
 
             <main>
+                <LatestNews />
                 <section id="hero" ref={heroRef} style={{ cursor: 'crosshair', border: '1px solid transparent' }}>
                     <h2>About Me</h2>
                     <img src="/img/hero.jpg" alt="Hero Image" className="hero-img" />
