@@ -1,0 +1,12 @@
+{
+  "name": "cmaa5043-lab9-tank-battle",
+  "version": "1.0.0",
+  "description": "Multiplayer Tank Battle with WebSocket chat and two-player combat",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}

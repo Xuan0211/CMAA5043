@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tank Battle — Multiplayer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      color: #eee;
+      user-select: none;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      letter-spacing: 4px;
+      color: #7ec8e3;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    /* ── HUD bar ── */
+    #hud {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 6px;
+      font-size: 0.88rem;
+      color: #aaa;
+    }
+    #hud .label { color: #7ec8e3; }
+    #hud .val   { color: #f9e784; font-weight: bold; }
+    #hud .sep   { color: #444; }
+
+    /* ── Game wrapper: canvas + chat panel side by side ── */
+    #wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    canvas {
+      border: 2px solid #7ec8e3;
+      box-shadow: 0 0 22px rgba(126,200,227,0.35);
+      display: block;
+    }
+
+    /* ── Chat overlay (absolute over canvas bottom-left) ── */
+    #chat-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 300px;
+      max-height: 240px;
+      display: flex;
+      flex-direction: column;
+      pointer-events: none;
+    }
+
+    #chat-log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    #chat-log::-webkit-scrollbar { width: 4px; }
+    #chat-log::-webkit-scrollbar-thumb { background: #333; }
+
+    .chat-msg {
+      font-size: 0.76rem;
+      line-height: 1.3;
+      background: rgba(0,0,0,0.55);
+      border-radius: 4px;
+      padding: 3px 6px;
+      animation: fadeIn 0.2s ease;
+      word-break: break-word;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } }
+
+    .chat-msg .sender { font-weight: bold; margin-right: 4px; }
+    .chat-msg.system  { color: #7ec8e3; font-style: italic; }
+    .chat-msg.bot     { color: #ce93d8; }
+    .chat-msg.self    { color: #a5d6a7; }
+    .chat-msg.other   { color: #fff9c4; }
+
+    #chat-input-row {
+      display: flex;
+      gap: 4px;
+      padding: 4px 6px;
+      background: rgba(0,0,0,0.65);
+      pointer-events: all;
+      border-top: 1px solid #333;
+    }
+    #chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #555;
+      color: #eee;
+      font-family: 'Courier New', monospace;
+      font-size: 0.78rem;
+      outline: none;
+      padding: 2px 4px;
+    }
+    #chat-input::placeholder { color: #555; }
+    #chat-send {
+      background: #1b5e20;
+      border: none;
+      color: #a5d6a7;
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+    #chat-send:hover { background: #2e7d32; }
+
+    /* ── Controls hint ── */
+    #controls {
+      margin-top: 8px;
+      font-size: 0.72rem;
+      color: #555;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+    #controls span { color: #777; }
+
+    /* ── Status bar ── */
+    #status {
+      margin-bottom: 4px;
+      font-size: 0.8rem;
+      min-height: 1.1em;
+      color: #7ec8e3;
+      letter-spacing: 1px;
+    }
+
+    /* ── Connection overlay ── */
+    #conn-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #7ec8e3;
+      font-size: 1.1rem;
+      letter-spacing: 2px;
+      z-index: 10;
+    }
+    #conn-overlay.hidden { display: none; }
+    #conn-spinner {
+      width: 32px; height: 32px;
+      border: 3px solid #333;
+      border-top-color: #7ec8e3;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<h1>Tank Battle</h1>
+
+<div id="hud">
+  <span><span class="label">YOU</span>&nbsp;<span class="val" id="myHp">10</span> HP</span>
+  <span class="sep">|</span>
+  <span><span class="label" id="oppLabel">OPP</span>&nbsp;<span class="val" id="oppHp">10</span> HP</span>
+  <span class="sep">|</span>
+  <span><span class="label">SCORE</span>&nbsp;<span class="val" id="scoreVal">0</span></span>
+  <span class="sep">|</span>
+  <span id="status">Connecting…</span>
+</div>
+
+<div id="wrapper">
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <!-- Chat overlay sits on top of the canvas -->
+  <div id="chat-overlay">
+    <div id="chat-log"></div>
+    <div id="chat-input-row">
+      <input id="chat-input" type="text" maxlength="200"
+             placeholder="Press T to chat…" autocomplete="off" />
+      <button id="chat-send">Send</button>
+    </div>
+  </div>
+
+  <!-- Shown while connecting / room full -->
+  <div id="conn-overlay">
+    <div id="conn-spinner"></div>
+    <div id="conn-msg">Connecting to server…</div>
+  </div>
+</div>
+
+<div id="controls">
+  <span>WASD</span> Move &nbsp;|&nbsp; <span>A/D</span> Rotate &nbsp;|&nbsp;
+  <span>SPACE</span> Shoot &nbsp;|&nbsp; <span>T</span> Chat &nbsp;|&nbsp;
+  <span>ESC</span> Close chat
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Constants
+// ═══════════════════════════════════════════════════════════════════════════════
+const CANVAS_W   = 800;
+const CANVAS_H   = 600;
+const TANK_SIZE  = 40;
+const MOVE_SPEED = 3;
+const ROT_SPEED  = 0.055;
+const BULLET_SPD = 9;
+const MAX_HP     = 10;
+const BULLET_DMG = 1;
+const SHOOT_CD   = 18;  // frames
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Canvas
+// ═══════════════════════════════════════════════════════════════════════════════
+const canvas  = document.getElementById('gameCanvas');
+const ctx     = canvas.getContext('2d');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  DOM refs
+// ═══════════════════════════════════════════════════════════════════════════════
+const myHpEl      = document.getElementById('myHp');
+const oppHpEl     = document.getElementById('oppHp');
+const oppLabelEl  = document.getElementById('oppLabel');
+const scoreValEl  = document.getElementById('scoreVal');
+const statusEl    = document.getElementById('status');
+const chatLog     = document.getElementById('chat-log');
+const chatInput   = document.getElementById('chat-input');
+const chatSend    = document.getElementById('chat-send');
+const connOverlay = document.getElementById('conn-overlay');
+const connMsg     = document.getElementById('conn-msg');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Game state
+// ═══════════════════════════════════════════════════════════════════════════════
+let myId          = null;
+let myPlayerIndex = 1;
+let myName        = 'Player ?';
+
+// My tank
+let tank = {
+  x: CANVAS_W * 0.25,
+  y: CANVAS_H * 0.5,
+  angle: 0,
+  hp: MAX_HP,
+  bullets: [],
+  bulletId: 0,
+};
+
+// Opponent tank (received from server)
+let opp = null;   // null until we have data
+let oppName = '';
+
+let score      = 0;
+let shootTimer = 0;
+let frameCount = 0;
+let gameActive = false;
+let gameOver   = false;
+let winner     = '';
+
+// ── Landscape (deterministic so both clients see same one) ────────────────────
+const landscape = buildLandscape(42);
+
+function buildLandscape(seed) {
+  const items = [];
+  let r = seed;
+  const rand = () => { r = (r * 1664525 + 1013904223) & 0xffffffff; return (r >>> 0) / 0xffffffff; };
+
+  for (let i = 0; i < 8; i++) {
+    items.push({ type: 'rock', x: 80 + rand()*640, y: 80 + rand()*440, w: 18 + rand()*22, h: 12 + rand()*16 });
+  }
+  for (let i = 0; i < 6; i++) {
+    items.push({ type: 'bush', x: 60 + rand()*680, y: 60 + rand()*480, r: 10 + rand()*12 });
+  }
+  return items;
+}
+
+// ── Explosions ─────────────────────────────────────────────────────────────────
+let explosions = [];
+function spawnExplosion(x, y, color) {
+  for (let i = 0; i < 14; i++) {
+    const angle = (Math.PI*2/14)*i + (Math.random()-0.5)*0.4;
+    const spd   = 2 + Math.random()*3.5;
+    explosions.push({ x, y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd,
+                      life: 30+Math.random()*20, maxLife: 50, color, r: 2+Math.random()*3 });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Input
+// ═══════════════════════════════════════════════════════════════════════════════
+const keys = {};
+let chatMode = false;
+
+document.addEventListener('keydown', e => {
+  if (chatMode) {
+    if (e.key === 'Escape') { closeChatMode(); e.preventDefault(); }
+    return;
+  }
+
+  if (e.key === 't' || e.key === 'T') { openChatMode(); e.preventDefault(); return; }
+
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === ' ') e.preventDefault();
+});
+
+document.addEventListener('keyup', e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+function openChatMode() {
+  chatMode = true;
+  chatInput.focus();
+  for (const k in keys) keys[k] = false;
+}
+
+function closeChatMode() {
+  chatMode = false;
+  chatInput.blur();
+}
+
+// Send chat
+function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: 'chat', message: text }));
+  chatInput.value = '';
+  closeChatMode();
+}
+
+chatSend.addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { sendChat(); e.preventDefault(); }
+  if (e.key === 'Escape') { closeChatMode(); e.preventDefault(); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  WebSocket
+// ═══════════════════════════════════════════════════════════════════════════════
+let ws = null;
+
+function connectWS() {
+  ws = new WebSocket('ws://localhost:8080');
+
+  ws.onopen = () => {
+    connMsg.textContent = 'Connected — waiting for assignment…';
+  };
+
+  ws.onmessage = e => {
+    let data;
+    try { data = JSON.parse(e.data); } catch { return; }
+    handleMessage(data);
+  };
+
+  ws.onclose = () => {
+    statusEl.textContent = 'Disconnected';
+    connOverlay.classList.remove('hidden');
+    connMsg.textContent = 'Disconnected. Refresh to reconnect.';
+    gameActive = false;
+  };
+
+  ws.onerror = () => {
+    connMsg.textContent = 'Cannot reach server. Is server.js running?';
+  };
+}
+
+function handleMessage(data) {
+  switch (data.type) {
+
+    case 'init':
+      myId          = data.id;
+      myPlayerIndex = data.playerIndex;
+      myName        = data.name;
+      // Player 1 starts left, Player 2 starts right
+      tank.x     = myPlayerIndex === 1 ? CANVAS_W * 0.22 : CANVAS_W * 0.78;
+      tank.y     = CANVAS_H * 0.5;
+      tank.angle = myPlayerIndex === 1 ? 0 : Math.PI;
+      tank.hp    = MAX_HP;
+      tank.bullets = [];
+      connOverlay.classList.remove('hidden');
+      connMsg.textContent = `You are ${myName}. Waiting for opponent…`;
+      statusEl.textContent = `You are ${myName}`;
+      break;
+
+    case 'roomInfo': {
+      const others = data.players.filter(p => p.id !== myId);
+      if (others.length > 0) {
+        oppName = others[0].name;
+        oppLabelEl.textContent = oppName.toUpperCase().slice(0, 8);
+      }
+      // Show game if we have an opponent
+      const hasOpp = data.players.length >= 2;
+      if (hasOpp && !gameActive && !gameOver) {
+        startGame();
+      }
+      break;
+    }
+
+    case 'opponentState':
+      opp = data.state;
+      if (!oppName && opp.name) {
+        oppName = opp.name;
+        oppLabelEl.textContent = oppName.toUpperCase().slice(0, 8);
+      }
+      oppHpEl.textContent = opp.hp;
+      break;
+
+    case 'takeDamage': {
+      const dmg = data.damage || BULLET_DMG;
+      tank.hp = Math.max(0, tank.hp - dmg);
+      myHpEl.textContent = tank.hp;
+      spawnExplosion(tank.x, tank.y, '#e53935');
+      if (tank.hp <= 0 && !gameOver) endGame(false);
+      break;
+    }
+
+    case 'hitConfirm':
+      score += 10;
+      scoreValEl.textContent = score;
+      break;
+
+    case 'botDestroyed':
+      score += 50;
+      scoreValEl.textContent = score;
+      opp = null;
+      oppHpEl.textContent = '—';
+      break;
+
+    case 'chat':
+      appendChat(data);
+      break;
+
+    case 'error':
+      connMsg.textContent = data.message;
+      break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Chat UI
+// ═══════════════════════════════════════════════════════════════════════════════
+function appendChat(data) {
+  const div = document.createElement('div');
+  div.classList.add('chat-msg');
+
+  if (data.system) {
+    div.classList.add('system');
+    div.textContent = data.message;
+  } else if (data.isBot) {
+    div.classList.add('bot');
+    div.innerHTML = `<span class="sender">${esc(data.sender)}:</span>${esc(data.message)}`;
+  } else if (data.senderId === myId) {
+    div.classList.add('self');
+    div.innerHTML = `<span class="sender">${esc(data.sender)}:</span>${esc(data.message)}`;
+  } else {
+    div.classList.add('other');
+    div.innerHTML = `<span class="sender">${esc(data.sender)}:</span>${esc(data.message)}`;
+  }
+
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+
+  // Fade out after 12 s
+  setTimeout(() => {
+    div.style.transition = 'opacity 1s';
+    div.style.opacity = '0';
+    setTimeout(() => div.remove(), 1000);
+  }, 12000);
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Game flow
+// ═══════════════════════════════════════════════════════════════════════════════
+function startGame() {
+  gameActive = true;
+  gameOver   = false;
+  connOverlay.classList.add('hidden');
+  statusEl.textContent = `${myName} vs ${oppName || 'Opponent'}`;
+}
+
+function endGame(won) {
+  gameOver = true;
+  winner   = won ? 'YOU WIN!' : 'YOU LOST!';
+  statusEl.textContent = winner;
+  // Don't set gameActive = false so we keep rendering the overlay
+}
+
+function resetGame() {
+  tank.x      = myPlayerIndex === 1 ? CANVAS_W * 0.22 : CANVAS_W * 0.78;
+  tank.y      = CANVAS_H * 0.5;
+  tank.angle  = myPlayerIndex === 1 ? 0 : Math.PI;
+  tank.hp     = MAX_HP;
+  tank.bullets = [];
+  score       = 0;
+  gameOver    = false;
+  gameActive  = true;
+  myHpEl.textContent    = MAX_HP;
+  scoreValEl.textContent = 0;
+  winner      = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Game update
+// ═══════════════════════════════════════════════════════════════════════════════
+function updateGame() {
+  if (!gameActive || gameOver) return;
+
+  // ── Movement ──
+  if (keys['a']) tank.angle -= ROT_SPEED;
+  if (keys['d']) tank.angle += ROT_SPEED;
+  if (keys['w']) {
+    tank.x += Math.cos(tank.angle) * MOVE_SPEED;
+    tank.y += Math.sin(tank.angle) * MOVE_SPEED;
+  }
+  if (keys['s']) {
+    tank.x -= Math.cos(tank.angle) * MOVE_SPEED;
+    tank.y -= Math.sin(tank.angle) * MOVE_SPEED;
+  }
+
+  // Clamp
+  const half = TANK_SIZE / 2;
+  tank.x = Math.max(half, Math.min(CANVAS_W - half, tank.x));
+  tank.y = Math.max(half, Math.min(CANVAS_H - half, tank.y));
+
+  // ── Shoot ──
+  if (shootTimer > 0) shootTimer--;
+  if (keys[' '] && shootTimer === 0) {
+    tank.bullets.push({
+      id: tank.bulletId++,
+      x:  tank.x + Math.cos(tank.angle) * 35,
+      y:  tank.y + Math.sin(tank.angle) * 35,
+      vx: Math.cos(tank.angle) * BULLET_SPD,
+      vy: Math.sin(tank.angle) * BULLET_SPD,
+    });
+    shootTimer = SHOOT_CD;
+  }
+
+  // ── Move my bullets ──
+  tank.bullets = tank.bullets.filter(b => {
+    b.x += b.vx;
+    b.y += b.vy;
+    return b.x > -10 && b.x < CANVAS_W+10 && b.y > -10 && b.y < CANVAS_H+10;
+  });
+
+  // ── Check if my bullets hit the opponent ──
+  if (opp) {
+    const hitRadius = TANK_SIZE * 0.65;
+    tank.bullets = tank.bullets.filter(b => {
+      const dx = b.x - opp.x;
+      const dy = b.y - opp.y;
+      if (Math.sqrt(dx*dx + dy*dy) < hitRadius) {
+        // Tell server: hit!
+        if (opp.isBot) {
+          ws.send(JSON.stringify({ type: 'botHit', damage: BULLET_DMG }));
+        } else {
+          ws.send(JSON.stringify({ type: 'hit', damage: BULLET_DMG, fromId: myId }));
+        }
+        spawnExplosion(opp.x, opp.y, '#f9a825');
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // ── Explosions ──
+  explosions = explosions.filter(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.92; p.vy *= 0.92;
+    return --p.life > 0;
+  });
+
+  // ── Send my state to server ──
+  frameCount++;
+  if (frameCount % 2 === 0 && ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'state',
+      state: {
+        x: tank.x, y: tank.y, angle: tank.angle,
+        hp: tank.hp, bullets: tank.bullets, name: myName,
+      },
+    }));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Drawing
+// ═══════════════════════════════════════════════════════════════════════════════
+function drawGround() {
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < CANVAS_W; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,CANVAS_H); ctx.stroke();
+  }
+  for (let y = 0; y < CANVAS_H; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(CANVAS_W,y); ctx.stroke();
+  }
+}
+
+function drawLandscape() {
+  landscape.forEach(item => {
+    if (item.type === 'rock') {
+      ctx.fillStyle = '#546e7a';
+      ctx.beginPath();
+      ctx.ellipse(item.x, item.y, item.w/2, item.h/2, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#37474f'; ctx.lineWidth = 1; ctx.stroke();
+    } else {
+      ctx.fillStyle = '#2e7d32';
+      ctx.beginPath(); ctx.arc(item.x, item.y, item.r, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#388e3c';
+      ctx.beginPath(); ctx.arc(item.x - item.r*0.4, item.y - item.r*0.3, item.r*0.7, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(item.x + item.r*0.4, item.y - item.r*0.3, item.r*0.65, 0, Math.PI*2); ctx.fill();
+    }
+  });
+}
+
+function drawTank(x, y, angle, isMe, hp) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+
+  const bodyColor   = isMe ? '#558b2f' : (opp && opp.isBot ? '#7b1fa2' : '#1565c0');
+  const turretColor = isMe ? '#33691e' : (opp && opp.isBot ? '#6a1b9a' : '#0d47a1');
+  const trackColor  = '#5d4037';
+  const barrelColor = isMe ? '#1b5e20' : (opp && opp.isBot ? '#4a148c' : '#01579b');
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.beginPath(); ctx.ellipse(3, 6, 22, 8, 0, 0, Math.PI*2); ctx.fill();
+
+  // Tracks
+  ctx.fillStyle = trackColor;
+  ctx.fillRect(-22, -8, 8, 22);
+  ctx.fillRect(14, -8, 8, 22);
+
+  // Body
+  ctx.fillStyle = bodyColor;
+  ctx.fillRect(-18, -10, 36, 20);
+
+  // Turret
+  ctx.fillStyle = turretColor;
+  ctx.fillRect(-12, -14, 24, 12);
+
+  // Barrel
+  ctx.strokeStyle = barrelColor;
+  ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(12, -8); ctx.lineTo(34, -8); ctx.stroke();
+
+  // Hatch
+  ctx.fillStyle = barrelColor;
+  ctx.beginPath(); ctx.arc(0, -8, 5, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+
+  // HP bar above tank
+  const barW = 44;
+  const barX = x - barW/2;
+  const barY = y - TANK_SIZE/2 - 14;
+  const frac = Math.max(0, hp) / MAX_HP;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(barX - 1, barY - 1, barW + 2, 8);
+  ctx.fillStyle = frac > 0.5 ? '#4caf50' : frac > 0.25 ? '#ff9800' : '#f44336';
+  ctx.fillRect(barX, barY, barW * frac, 6);
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barX, barY, barW, 6);
+
+  // Name label
+  ctx.fillStyle = isMe ? '#a5d6a7' : '#90caf9';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(isMe ? myName : (opp ? opp.name || oppName : ''), x, barY - 3);
+  ctx.textAlign = 'left';
+}
+
+function drawBullets(bullets, isMe) {
+  const color = isMe ? '#ffeb3b' : '#ff5722';
+  bullets.forEach(b => {
+    ctx.fillStyle = isMe ? 'rgba(255,235,59,0.25)' : 'rgba(255,87,34,0.25)';
+    ctx.beginPath(); ctx.arc(b.x, b.y, 8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(b.x-1, b.y-1, 1.5, 0, Math.PI*2); ctx.fill();
+  });
+}
+
+function drawExplosions() {
+  explosions.forEach(p => {
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawGameOver() {
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  const won = winner.includes('WIN');
+  ctx.fillStyle = won ? '#66bb6a' : '#ef5350';
+  ctx.font = 'bold 56px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(winner, CANVAS_W/2, CANVAS_H/2 - 20);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '22px Courier New';
+  ctx.fillText(`Score: ${score}`, CANVAS_W/2, CANVAS_H/2 + 24);
+
+  ctx.fillStyle = '#aaa';
+  ctx.font = '15px Courier New';
+  ctx.fillText('Press R to reset', CANVAS_W/2, CANVAS_H/2 + 58);
+  ctx.textAlign = 'left';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'r' || e.key === 'R') {
+    if (gameOver) resetGame();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Main loop
+// ═══════════════════════════════════════════════════════════════════════════════
+function loop() {
+  // Background
+  ctx.fillStyle = '#263238';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  drawGround();
+  drawLandscape();
+
+  if (gameActive) {
+    updateGame();
+
+    // Opponent
+    if (opp) {
+      drawTank(opp.x, opp.y, opp.angle, false, opp.hp);
+      if (opp.bullets) drawBullets(opp.bullets, false);
+    }
+
+    // My tank
+    drawTank(tank.x, tank.y, tank.angle, true, tank.hp);
+    drawBullets(tank.bullets, true);
+
+    drawExplosions();
+
+    if (gameOver) drawGameOver();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Boot
+// ═══════════════════════════════════════════════════════════════════════════════
+connectWS();
+loop();
+</script>
+</body>
+</html>
